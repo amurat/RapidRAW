@@ -60,20 +60,25 @@ RapidRAW is still in active development and isn't yet as polished as mature tool
 <details>
 <summary><strong>Recent Changes</strong></summary>
 
+*   **2026-02-19:** Exponential zoom scaling, right-click to delete curve points & selected image count display
+*   **2026-02-18:** Added a setting for Linear RAW mode for advanced processing & improved right panel switcher
+*   **2026-02-17:** Display RAW image counts in the folder tree & improved folder reading performance
+*   **2026-02-16:** New composition guide overlays for cropping
+*   **2026-02-16:** Added the ability to export masks as separate images
 *   **2026-02-13:** Optimized live previews, instant metadata loading and new jpeg encoder
 *   **2026-02-13:** Added ability to merge multiple bracketed images to a HDR
 *   **2026-02-12:** Straight brush mask lines using shift click and enhanced Lensfun DB parsing
 *   **2026-02-10:** Improved image loading performance
 *   **2026-02-06:** Refactored negative conversion logic using characteristic curves.
+
+<details>
+<summary><strong>Expand further</strong></summary>
+
 *   **2026-02-04:** Global tooltips & major UI polish
 *   **2026-02-03:** New creative effects: Glow, Halation & Lens Flares
 *   **2026-01-31:** Accurate color noise reduction for RAW images & improved image loading
 *   **2026-01-30:** Enhanced Lensfun DB parsing and improved lens matching logic
 *   **2026-01-29:** Add cross-channel copy/paste & flat-line clipping logic for curves
-
-<details>
-<summary><strong>Expand further</strong></summary>
-
 *   **2026-01-26:** Favorite lens saving, improved rotation controls (finer grid), better local contrast adjustments
 *   **2026-01-25:** Filmstrip performance boost, improved sorting, lens distortion fixes for AI masks & crop
 *   **2026-01-24:** Added automatic lens, TCA & vignette correction using lensfun
