@@ -660,14 +660,33 @@ export default function SettingsPanel({
                     </SettingItem>
 
                     <SettingItem
-                      label="Sync Metadata to XMP"
-                      description="Automatically write ratings, color labels and tags back to standard XMP sidecar files for compatibility with other photo editors."
+                      label="XMP Metadata Sync"
+                      description="Sync ratings, color labels and tags to standard XMP sidecar files for compatibility with other photo editors."
                     >
                       <Switch
-                        checked={appSettings?.syncMetadataBackToXmp ?? false}
-                        id="sync-xmp-toggle"
-                        label="Sync to XMP"
-                        onChange={(checked) => onSettingsChange({ ...appSettings, syncMetadataBackToXmp: checked })}
+                        checked={appSettings?.enableXmpSync ?? true}
+                        id="enable-xmp-sync-toggle"
+                        label="Enable XMP Sync"
+                        onChange={(checked) => {
+                          const newSettings = { ...appSettings, enableXmpSync: checked };
+                          if (!checked) {
+                            newSettings.createXmpIfMissing = false;
+                          }
+                          onSettingsChange(newSettings);
+                        }}
+                      />
+                    </SettingItem>
+
+                    <SettingItem
+                      label="Create Missing XMP Files"
+                      description="Automatically create a new XMP sidecar file if one does not exist for an image. (Requires XMP Sync)"
+                    >
+                      <Switch
+                        disabled={!appSettings?.enableXmpSync}
+                        checked={appSettings?.createXmpIfMissing ?? false}
+                        id="create-xmp-missing-toggle"
+                        label="Create XMP if missing"
+                        onChange={(checked) => onSettingsChange({ ...appSettings, createXmpIfMissing: checked })}
                       />
                     </SettingItem>
 

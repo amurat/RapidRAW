@@ -318,7 +318,9 @@ pub struct AppSettings {
     #[serde(default = "default_linear_raw_mode")]
     pub linear_raw_mode: String,
     #[serde(default)]
-    pub sync_metadata_back_to_xmp: Option<bool>,
+    pub enable_xmp_sync: Option<bool>,
+    #[serde(default)]
+    pub create_xmp_if_missing: Option<bool>,
 }
 
 fn default_adjustment_visibility() -> HashMap<String, bool> {
@@ -375,7 +377,8 @@ impl Default for AppSettings {
             my_lenses: Some(Vec::new()),
             enable_folder_image_counts: Some(false),
             linear_raw_mode: default_linear_raw_mode(),
-            sync_metadata_back_to_xmp: Some(false),
+            enable_xmp_sync: Some(true),
+            create_xmp_if_missing: Some(false),
         }
     }
 }
@@ -456,7 +459,10 @@ pub async fn read_exif_for_paths(
 }
 
 #[tauri::command]
-pub fn list_images_in_dir(path: String) -> Result<Vec<ImageFile>, String> {
+pub fn list_images_in_dir(path: String, app_handle: AppHandle) -> Result<Vec<ImageFile>, String> {
+    let settings = load_settings(app_handle).unwrap_or_default();
+    let enable_xmp_sync = settings.enable_xmp_sync.unwrap_or(false);
+
     let entries = fs::read_dir(&path).map_err(|e| e.to_string())?;
     let mut image_files = HashMap::new();
     let mut sidecars_by_source = HashMap::new();
@@ -523,9 +529,11 @@ pub fn list_images_in_dir(path: String) -> Result<Vec<ImageFile>, String> {
                 } else { ImageMetadata::default() };
     
                 let source_path_buf = PathBuf::from(&path_str);
-                if sync_metadata_from_xmp(&source_path_buf, &mut metadata) {
-                    if let Ok(json) = serde_json::to_string_pretty(&metadata) {
-                        let _ = fs::write(&sidecar_path, json);
+                if enable_xmp_sync {
+                    if sync_metadata_from_xmp(&source_path_buf, &mut metadata) {
+                        if let Ok(json) = serde_json::to_string_pretty(&metadata) {
+                            let _ = fs::write(&sidecar_path, json);
+                        }
                     }
                 }
     
@@ -550,7 +558,10 @@ pub fn list_images_in_dir(path: String) -> Result<Vec<ImageFile>, String> {
 }
 
 #[tauri::command]
-pub fn list_images_recursive(path: String) -> Result<Vec<ImageFile>, String> {
+pub fn list_images_recursive(path: String, app_handle: AppHandle) -> Result<Vec<ImageFile>, String> {
+    let settings = load_settings(app_handle).unwrap_or_default();
+    let enable_xmp_sync = settings.enable_xmp_sync.unwrap_or(false);
+
     let root_path = Path::new(&path);
     let mut image_files = HashMap::new();
     let mut sidecars_by_source = HashMap::new();
@@ -625,9 +636,11 @@ pub fn list_images_recursive(path: String) -> Result<Vec<ImageFile>, String> {
                 } else { ImageMetadata::default() };
     
                 let source_path_buf = PathBuf::from(&path_str);
-                if sync_metadata_from_xmp(&source_path_buf, &mut metadata) {
-                    if let Ok(json) = serde_json::to_string_pretty(&metadata) {
-                        let _ = fs::write(&sidecar_path, json);
+                if enable_xmp_sync {
+                    if sync_metadata_from_xmp(&source_path_buf, &mut metadata) {
+                        if let Ok(json) = serde_json::to_string_pretty(&metadata) {
+                            let _ = fs::write(&sidecar_path, json);
+                        }
                     }
                 }
     
@@ -1476,8 +1489,9 @@ pub fn save_metadata_and_update_thumbnail(
     std::fs::write(&sidecar_path, json_string).map_err(|e| e.to_string())?;
 
     if let Ok(settings) = load_settings(app_handle.clone()) {
-        if settings.sync_metadata_back_to_xmp.unwrap_or(false) {
-            sync_metadata_to_xmp(&source_path, &metadata);
+        if settings.enable_xmp_sync.unwrap_or(false) {
+            let create_if_missing = settings.create_xmp_if_missing.unwrap_or(false);
+            sync_metadata_to_xmp(&source_path, &metadata, create_if_missing);
         }
     }
 
@@ -1542,7 +1556,8 @@ pub fn apply_adjustments_to_paths(
     app_handle: AppHandle,
 ) -> Result<(), String> {
     let settings = load_settings(app_handle.clone()).unwrap_or_default();
-    let sync_xmp = settings.sync_metadata_back_to_xmp.unwrap_or(false);
+    let enable_xmp_sync = settings.enable_xmp_sync.unwrap_or(false);
+    let create_xmp_if_missing = settings.create_xmp_if_missing.unwrap_or(false);
 
     paths.par_iter().for_each(|path| {
         let (_, sidecar_path) = parse_virtual_path(path);
@@ -1576,9 +1591,9 @@ pub fn apply_adjustments_to_paths(
             let _ = std::fs::write(&sidecar_path, json_string);
         }
 
-        if sync_xmp {
+        if enable_xmp_sync {
             let source_path = parse_virtual_path(path).0;
-            sync_metadata_to_xmp(&source_path, &existing_metadata);
+            sync_metadata_to_xmp(&source_path, &existing_metadata, create_xmp_if_missing);
         }
     });
 
@@ -1630,7 +1645,8 @@ pub fn reset_adjustments_for_paths(
     app_handle: AppHandle,
 ) -> Result<(), String> {
     let settings = load_settings(app_handle.clone()).unwrap_or_default();
-    let sync_xmp = settings.sync_metadata_back_to_xmp.unwrap_or(false);
+    let enable_xmp_sync = settings.enable_xmp_sync.unwrap_or(false);
+    let create_xmp_if_missing = settings.create_xmp_if_missing.unwrap_or(false);
 
     paths.par_iter().for_each(|path| {
         let (_, sidecar_path) = parse_virtual_path(path);
@@ -1654,9 +1670,9 @@ pub fn reset_adjustments_for_paths(
             let _ = std::fs::write(&sidecar_path, json_string);
         }
 
-        if sync_xmp {
+        if enable_xmp_sync {
             let source_path = parse_virtual_path(path).0;
-            sync_metadata_to_xmp(&source_path, &existing_metadata);
+            sync_metadata_to_xmp(&source_path, &existing_metadata, create_xmp_if_missing);
         }
     });
 
@@ -1710,7 +1726,8 @@ pub fn apply_auto_adjustments_to_paths(
     let settings = load_settings(app_handle.clone()).unwrap_or_default();
     let highlight_compression = settings.raw_highlight_compression.unwrap_or(2.5);
     let linear_mode = settings.linear_raw_mode;
-    let sync_xmp = settings.sync_metadata_back_to_xmp.unwrap_or(false);
+    let enable_xmp_sync = settings.enable_xmp_sync.unwrap_or(false);
+    let create_xmp_if_missing = settings.create_xmp_if_missing.unwrap_or(false);
 
     paths.par_iter().for_each(|path| {
         let result: Result<(), String> = (|| {
@@ -1775,8 +1792,8 @@ pub fn apply_auto_adjustments_to_paths(
                 let _ = std::fs::write(&sidecar_path, json_string);
             }
             
-            if sync_xmp {
-                sync_metadata_to_xmp(&source_path, &existing_metadata);
+            if enable_xmp_sync {
+                sync_metadata_to_xmp(&source_path, &existing_metadata, create_xmp_if_missing);
             }
             Ok(())
         })();
@@ -1830,7 +1847,8 @@ pub fn apply_auto_adjustments_to_paths(
 #[tauri::command]
 pub fn set_color_label_for_paths(paths: Vec<String>, color: Option<String>, app_handle: AppHandle) -> Result<(), String> {
     let settings = load_settings(app_handle.clone()).unwrap_or_default();
-    let sync_xmp = settings.sync_metadata_back_to_xmp.unwrap_or(false);
+    let enable_xmp_sync = settings.enable_xmp_sync.unwrap_or(false);
+    let create_xmp_if_missing = settings.create_xmp_if_missing.unwrap_or(false);
 
     paths.par_iter().for_each(|path| {
         let (_, sidecar_path) = parse_virtual_path(path);
@@ -1863,9 +1881,9 @@ pub fn set_color_label_for_paths(paths: Vec<String>, color: Option<String>, app_
             let _ = std::fs::write(&sidecar_path, json_string);
         }
 
-        if sync_xmp {
+        if enable_xmp_sync {
             let source_path = parse_virtual_path(path).0;
-            sync_metadata_to_xmp(&source_path, &metadata);
+            sync_metadata_to_xmp(&source_path, &metadata, create_xmp_if_missing);
         }
     });
 
@@ -1873,7 +1891,10 @@ pub fn set_color_label_for_paths(paths: Vec<String>, color: Option<String>, app_
 }
 
 #[tauri::command]
-pub fn load_metadata(path: String) -> Result<ImageMetadata, String> {
+pub fn load_metadata(path: String, app_handle: AppHandle) -> Result<ImageMetadata, String> {
+    let settings = load_settings(app_handle).unwrap_or_default();
+    let enable_xmp_sync = settings.enable_xmp_sync.unwrap_or(false);
+
     let (source_path, sidecar_path) = parse_virtual_path(&path);
     let mut metadata: ImageMetadata = if sidecar_path.exists() {
         let file_content = fs::read_to_string(&sidecar_path).map_err(|e| e.to_string())?;
@@ -1882,9 +1903,11 @@ pub fn load_metadata(path: String) -> Result<ImageMetadata, String> {
         ImageMetadata::default()
     };
     
-    if sync_metadata_from_xmp(&source_path, &mut metadata) {
-        if let Ok(json) = serde_json::to_string_pretty(&metadata) {
-            let _ = fs::write(&sidecar_path, json);
+    if enable_xmp_sync {
+        if sync_metadata_from_xmp(&source_path, &mut metadata) {
+            if let Ok(json) = serde_json::to_string_pretty(&metadata) {
+                let _ = fs::write(&sidecar_path, json);
+            }
         }
     }
     
@@ -2754,7 +2777,7 @@ pub fn sync_metadata_from_xmp(source_path: &Path, metadata: &mut ImageMetadata) 
     changed
 }
 
-pub fn sync_metadata_to_xmp(source_path: &Path, metadata: &ImageMetadata) {
+pub fn sync_metadata_to_xmp(source_path: &Path, metadata: &ImageMetadata, create_if_missing: bool) {
     let xmp_path = source_path.with_extension("xmp");
     let xmp_path_upper = source_path.with_extension("XMP");
     
@@ -2767,6 +2790,9 @@ pub fn sync_metadata_to_xmp(source_path: &Path, metadata: &ImageMetadata) {
     };
 
     if actual_xmp.is_none() {
+        if !create_if_missing {
+            return;
+        }
         let skeleton = r#"<?xml version="1.0" encoding="UTF-8"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="RapidRAW">
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
