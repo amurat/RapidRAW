@@ -1543,7 +1543,11 @@ export default function MainLibrary({
         <div className="min-w-0">
           <h2 className="text-2xl font-bold text-primary text-shadow-shiny">Library</h2>
           <div className="flex items-center gap-2">
-            <p className="text-sm text-text-secondary truncate">{currentFolderPath}</p>
+            {currentFolderPath ? (
+              <p className="text-sm text-text-secondary truncate">{currentFolderPath}</p>
+            ) : (
+              <p className="text-sm invisible select-none pointer-events-none h-5 overflow-hidden"></p>
+            )}
             <div
               className={`overflow-hidden transition-all duration-300 ${
                 isLoaderVisible ? 'max-w-[1rem] opacity-100' : 'max-w-0 opacity-0'

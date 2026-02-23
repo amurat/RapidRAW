@@ -307,6 +307,10 @@ pub struct AppSettings {
     pub tagging_thread_count: Option<u32>,
     #[serde(default = "default_tagging_shortcuts_option")]
     pub tagging_shortcuts: Option<Vec<String>>,
+    #[serde(default)]
+    pub custom_ai_tags: Option<Vec<String>>,
+    #[serde(default)]
+    pub ai_tag_count: Option<u32>,
     pub thumbnail_size: Option<String>,
     pub thumbnail_aspect_ratio: Option<String>,
     pub ai_provider: Option<String>,
@@ -375,6 +379,8 @@ impl Default for AppSettings {
             enable_ai_tagging: Some(false),
             tagging_thread_count: Some(3),
             tagging_shortcuts: default_tagging_shortcuts_option(),
+            custom_ai_tags: Some(Vec::new()),
+            ai_tag_count: Some(10),
             thumbnail_size: Some("medium".to_string()),
             thumbnail_aspect_ratio: Some("cover".to_string()),
             ai_provider: Some("cpu".to_string()),
