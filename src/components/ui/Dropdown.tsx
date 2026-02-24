@@ -44,14 +44,12 @@ export default function Dropdown({
     };
   }, []);
 
-  const clearSearch = useCallback(() => {
-    setSearchTerm('');
-    setShowSearch(false);
-  }, []);
-
   useEffect(() => {
-    if (!isOpen) clearSearch();
-  }, [isOpen, clearSearch]);
+    if (!isOpen) {
+      setSearchTerm('');
+      setShowSearch(false);
+    }
+  }, [isOpen]);
 
   const handleSelect = (option: OptionItem) => {
     onChange(option.value);
